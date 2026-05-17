@@ -76,8 +76,19 @@ export async function bybitPlaceOrder({ apiKey, apiSecret, testnet, setup }) {
     ? 'https://api-testnet.bybit.com'
     : 'https://api.bybit.com'
 
-  const ts = Date.now().toString()
-  const recvWindow = '5000'
+  // Sync timestamp with Bybit server to avoid clock skew errors
+  let ts
+  try {
+    const timeRes = await fetch(`${base}/v5/market/time`)
+    const timeData = await timeRes.json()
+    ts = timeData.result?.timeSecond
+      ? (parseInt(timeData.result.timeSecond) * 1000).toString()
+      : Date.now().toString()
+  } catch {
+    ts = Date.now().toString()
+  }
+
+  const recvWindow = '20000' // generous window to handle clock differences
   const side = setup.direction === 'LONG' ? 'Buy' : 'Sell'
   const rawQty = parseFloat(setup.budget) * parseFloat(setup.leverage) / parseFloat(setup.entry)
   const qty = rawQty.toFixed(3)
