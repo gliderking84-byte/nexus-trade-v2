@@ -41,7 +41,7 @@ export default function Settings({ settings }) {
   const handleSave = () => { setSaved(true); setTimeout(() => setSaved(false), 2000) }
 
   return (
-    <div style={{ padding:'24px', maxWidth:680, margin:'0 auto' }}>
+    <div style={{ padding:'16px', maxWidth:680, margin:'0 auto', overflowX:'hidden' }}>
       <div style={{ marginBottom:24 }}>
         <div style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:800, marginBottom:4 }}>Impostazioni</div>
         <div style={{ fontSize:13, color:'var(--ink3)' }}>Configura le API key e le preferenze dell'app.</div>

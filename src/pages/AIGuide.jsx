@@ -131,7 +131,7 @@ export default function AIGuide({ settings, journal, onSendBybit }) {
   const progress = ((step - 1) / (STEPS.length - 1)) * 100
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%' }} onPaste={handlePaste}>
+    <div style={{ display:'flex', flexDirection:'column', height:'100%', overflowX:'hidden', maxWidth:'100%' }} onPaste={handlePaste}>
 
       {/* Progress header */}
       <div style={{ padding:'14px 20px 10px', borderBottom:'1px solid var(--rule)', background:'var(--paper2)', flexShrink:0 }}>
