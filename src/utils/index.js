@@ -82,7 +82,7 @@ export async function getBybitTimestamp(base) {
 }
 
 // ─── Bybit Place Order (Limit / Market / Conditional) ─────────────────────────
-export async function bybitPlaceOrder({ apiKey, apiSecret, testnet, setup, orderType, triggerPrice, triggerBy, currentPrice }) {
+export async function bybitPlaceOrder({ apiKey, apiSecret, testnet, setup, orderType, triggerPrice, triggerBy, currentPrice, positionMode = 'one-way' }) {
   const base = testnet
     ? 'https://api-testnet.bybit.com'
     : 'https://api.bybit.com'
@@ -134,6 +134,20 @@ export async function bybitPlaceOrder({ apiKey, apiSecret, testnet, setup, order
     tpTriggerBy: 'LastPrice',
     slTriggerBy: 'LastPrice',
   }
+  // positionIdx: 0=One-Way, 1=Hedge Buy, 2=Hedge Sell
+  if (positionMode === 'hedge') {
+    body.positionIdx = side === 'Buy' ? 1 : 2
+  } else {
+    body.positionIdx = 0
+  }
+
+  // positionIdx: 0 = One-Way Mode, 1 = Hedge Mode Buy/Long, 2 = Hedge Mode Sell/Short
+  if (hedgeMode) {
+    body.positionIdx = side === 'Buy' ? 1 : 2
+  } else {
+    body.positionIdx = 0
+  }
+
   // Remove undefined keys
   Object.keys(body).forEach(k => body[k] === undefined && delete body[k])
 
