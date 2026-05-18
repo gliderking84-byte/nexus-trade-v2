@@ -9,19 +9,18 @@ export async function callClaude({ apiKey, messages, system, imageB64 }) {
       return {
         role: 'user',
         content: [
-          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imageB64 } },
-          { type: 'text', text: m.content || 'Analizza questo chart.' },
+          { type:'image', source:{ type:'base64', media_type:'image/jpeg', data:imageB64 } },
+          { type:'text', text: m.content || 'Analizza questo chart.' },
         ],
       }
     }
     return { role: m.role, content: m.content || '' }
   })
 
-  // Ensure alternating roles, first must be user
   const filtered = []
   for (const m of apiMessages) {
     if (filtered.length === 0 && m.role === 'assistant') continue
-    if (filtered.length > 0 && filtered[filtered.length - 1].role === m.role) continue
+    if (filtered.length > 0 && filtered[filtered.length-1].role === m.role) continue
     if (!m.content || (typeof m.content === 'string' && !m.content.trim())) continue
     filtered.push(m)
   }
@@ -61,51 +60,65 @@ export function cleanAIText(text) {
     .trim()
 }
 
-// ─── Bybit HMAC signature (using SubtleCrypto — no external deps) ─────────────
+// ─── Bybit HMAC ───────────────────────────────────────────────────────────────
 async function hmacSHA256(secret, message) {
   const enc = new TextEncoder()
   const key = await crypto.subtle.importKey(
-    'raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+    'raw', enc.encode(secret), { name:'HMAC', hash:'SHA-256' }, false, ['sign']
   )
   const sig = await crypto.subtle.sign('HMAC', key, enc.encode(message))
-  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('')
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('')
 }
 
-export async function bybitPlaceOrder({ apiKey, apiSecret, testnet, setup }) {
+// ─── Bybit synced timestamp ───────────────────────────────────────────────────
+export async function getBybitTimestamp(base) {
+  try {
+    const r = await fetch(`${base}/v5/market/time`)
+    const d = await r.json()
+    return d.result?.timeSecond
+      ? (parseInt(d.result.timeSecond) * 1000).toString()
+      : Date.now().toString()
+  } catch { return Date.now().toString() }
+}
+
+// ─── Bybit Place Order (Limit / Market / Conditional) ─────────────────────────
+export async function bybitPlaceOrder({ apiKey, apiSecret, testnet, setup, orderType, triggerPrice, triggerBy }) {
   const base = testnet
     ? 'https://api-testnet.bybit.com'
     : 'https://api.bybit.com'
 
-  // Sync timestamp with Bybit server to avoid clock skew errors
-  let ts
-  try {
-    const timeRes = await fetch(`${base}/v5/market/time`)
-    const timeData = await timeRes.json()
-    ts = timeData.result?.timeSecond
-      ? (parseInt(timeData.result.timeSecond) * 1000).toString()
-      : Date.now().toString()
-  } catch {
-    ts = Date.now().toString()
-  }
-
-  const recvWindow = '20000' // generous window to handle clock differences
+  const ts = await getBybitTimestamp(base)
+  const recvWindow = '20000'
   const side = setup.direction === 'LONG' ? 'Buy' : 'Sell'
   const rawQty = parseFloat(setup.budget) * parseFloat(setup.leverage) / parseFloat(setup.entry)
   const qty = rawQty.toFixed(3)
 
+  // Build body based on order type
   const body = {
     category: 'linear',
     symbol: setup.ticker,
     side,
-    orderType: 'Limit',
     qty,
-    price: setup.entry,
-    timeInForce: 'GTC',
+    timeInForce: orderType === 'Market' ? 'IOC' : 'GTC',
     takeProfit: setup.tp1,
     stopLoss: setup.sl,
     tpTriggerBy: 'LastPrice',
     slTriggerBy: 'LastPrice',
   }
+
+  if (orderType === 'Market') {
+    body.orderType = 'Market'
+  } else if (orderType === 'Limit') {
+    body.orderType = 'Limit'
+    body.price = setup.entry
+  } else if (orderType === 'Conditional') {
+    body.orderType = 'Market' // conditional triggers a market order
+    body.orderFilter = 'StopOrder'
+    body.triggerPrice = triggerPrice || setup.entry
+    body.triggerBy = triggerBy || 'LastPrice'
+    body.triggerDirection = setup.direction === 'LONG' ? 1 : 2 // 1=rise, 2=fall
+  }
+
   const bodyStr = JSON.stringify(body)
   const signStr = `${ts}${apiKey}${recvWindow}${bodyStr}`
   const sign = await hmacSHA256(apiSecret, signStr)
