@@ -82,7 +82,7 @@ export async function getBybitTimestamp(base) {
 }
 
 // ─── Bybit Place Order (Limit / Market / Conditional) ─────────────────────────
-export async function bybitPlaceOrder({ apiKey, apiSecret, testnet, setup, orderType, triggerPrice, triggerBy }) {
+export async function bybitPlaceOrder({ apiKey, apiSecret, testnet, setup, orderType, triggerPrice, triggerBy, currentPrice }) {
   const base = testnet
     ? 'https://api-testnet.bybit.com'
     : 'https://api.bybit.com'
@@ -90,8 +90,38 @@ export async function bybitPlaceOrder({ apiKey, apiSecret, testnet, setup, order
   const ts = await getBybitTimestamp(base)
   const recvWindow = '20000'
   const side = setup.direction === 'LONG' ? 'Buy' : 'Sell'
-  const rawQty = parseFloat(setup.budget) * parseFloat(setup.leverage) / parseFloat(setup.entry)
-  const qty = rawQty.toFixed(3)
+
+  // Use correct reference price for qty calculation per order type
+  let refPrice
+  if (orderType === 'Market') {
+    // For market orders use current market price (passed in) or fetch it
+    refPrice = parseFloat(currentPrice) || parseFloat(setup.entry)
+    if (!refPrice || isNaN(refPrice)) {
+      // Fetch mark price as last resort
+      try {
+        const r = await fetch(`${base}/v5/market/tickers?category=linear&symbol=${setup.ticker}`)
+        const d = await r.json()
+        refPrice = parseFloat(d.result?.list?.[0]?.lastPrice) || parseFloat(setup.entry)
+      } catch { refPrice = parseFloat(setup.entry) }
+    }
+  } else if (orderType === 'Conditional') {
+    refPrice = parseFloat(triggerPrice) || parseFloat(setup.entry)
+  } else {
+    refPrice = parseFloat(setup.entry)
+  }
+
+  if (!refPrice || isNaN(refPrice) || refPrice <= 0) throw new Error('Prezzo di riferimento non valido')
+
+  const budget = parseFloat(setup.budget)
+  const leverage = parseFloat(setup.leverage)
+  if (!budget || !leverage || isNaN(budget) || isNaN(leverage)) throw new Error('Budget o leva non validi')
+
+  const rawQty = (budget * leverage) / refPrice
+  // Bybit requires minimum qty — round to reasonable decimals based on price
+  const decimals = refPrice > 1000 ? 3 : refPrice > 100 ? 2 : refPrice > 10 ? 1 : 0
+  const qty = rawQty.toFixed(decimals)
+
+  if (parseFloat(qty) <= 0) throw new Error(`Quantità non valida: ${qty}. Aumenta budget o riduci la leva.`)
 
   // Build body based on order type
   const body = {
@@ -99,24 +129,28 @@ export async function bybitPlaceOrder({ apiKey, apiSecret, testnet, setup, order
     symbol: setup.ticker,
     side,
     qty,
-    timeInForce: orderType === 'Market' ? 'IOC' : 'GTC',
-    takeProfit: setup.tp1,
-    stopLoss: setup.sl,
+    takeProfit: setup.tp1 ? String(setup.tp1) : undefined,
+    stopLoss:   setup.sl  ? String(setup.sl)  : undefined,
     tpTriggerBy: 'LastPrice',
     slTriggerBy: 'LastPrice',
   }
+  // Remove undefined keys
+  Object.keys(body).forEach(k => body[k] === undefined && delete body[k])
 
   if (orderType === 'Market') {
     body.orderType = 'Market'
+    body.timeInForce = 'IOC'
   } else if (orderType === 'Limit') {
     body.orderType = 'Limit'
-    body.price = setup.entry
+    body.timeInForce = 'GTC'
+    body.price = String(setup.entry)
   } else if (orderType === 'Conditional') {
-    body.orderType = 'Market' // conditional triggers a market order
+    body.orderType = 'Market'
+    body.timeInForce = 'IOC'
     body.orderFilter = 'StopOrder'
-    body.triggerPrice = triggerPrice || setup.entry
+    body.triggerPrice = String(triggerPrice || setup.entry)
     body.triggerBy = triggerBy || 'LastPrice'
-    body.triggerDirection = setup.direction === 'LONG' ? 1 : 2 // 1=rise, 2=fall
+    body.triggerDirection = setup.direction === 'LONG' ? 1 : 2
   }
 
   const bodyStr = JSON.stringify(body)
