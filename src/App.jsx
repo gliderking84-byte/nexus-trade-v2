@@ -21,7 +21,7 @@ export default function App() {
   }
 
   return (
-    <Layout stats={journal.stats}>
+    <Layout stats={journal.stats} settings={settings}>
       <Routes>
         <Route path="/" element={
           <Dashboard
