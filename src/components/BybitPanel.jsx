@@ -82,7 +82,9 @@ export default function BybitPanel({ setup, settings, onOrderSent }) {
         currentPrice: orderType === 'Market' ? currentMktPrice : undefined,
       })
       setResult(res)
-      onOrderSent?.(merged)
+      // Pass orderId so journal can cancel later
+      const orderId = res.result?.orderId
+      onOrderSent?.({ ...merged, orderId })
     } catch (err) { setError(err.message || 'Errore invio ordine') }
     setLoading(false)
   }
