@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { callClaude, parseSetupData, cleanAIText, SYSTEM_GUIDE, fmt } from '../utils/index.js'
 import SetupBanner from '../components/SetupBanner.jsx'
 
@@ -29,6 +30,7 @@ export default function AIGuide({ settings, journal, onSendBybit }) {
   const [isDragging, setIsDragging] = useState(false)
   const [pendingSetup, setPendingSetup] = useState(null)
   const [convSaved, setConvSaved] = useState(false)
+  const [searchParams] = useSearchParams()
   const fileRef = useRef()
   const bottomRef = useRef()
   const textareaRef = useRef()

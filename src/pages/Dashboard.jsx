@@ -5,8 +5,9 @@ import { usePrices } from '../hooks/usePrices'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { callClaude, SYSTEM_DASHBOARD, fmt } from '../utils/index.js'
 import BybitPanel from '../components/BybitPanel.jsx'
+import ChartModal from '../components/ChartModal.jsx'
 
-const ASSETS = ['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','AVAXUSDT']
+const ASSETS = ['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','AVAXUSDT','DOTUSDT','LINKUSDT','ADAUSDT','XRPUSDT','DOGEUSDT','MATICUSDT','ARBUSDT']
 const SENTIMENT_LABEL = { bull:'Bullish', bear:'Bearish', neut:'Neutro' }
 
 async function generateSetups(apiKey, prices) {
@@ -43,6 +44,7 @@ export default function Dashboard({ settings, onSelectSetup, journal, pendingSet
   const [aiMsg, setAiMsg] = useState('Ciao! Analizza i setup, leggi le news o chiedimi qualsiasi cosa sul mercato crypto.')
   const [aiLoading, setAiLoading] = useState(false)
   const [mobileTab, setMobileTab] = useState('setup') // 'setup' | 'news' | 'bybit'
+  const [chartTicker, setChartTicker] = useState(null)
 
   const activeSetup = externalSetup || selectedSetup
 
@@ -76,6 +78,9 @@ export default function Dashboard({ settings, onSelectSetup, journal, pendingSet
 
   const displaySetups = setups.length > 0 ? setups : FALLBACK_SETUPS
   const timeStr = lastUpdate ? `${Math.round((Date.now() - lastUpdate) / 60000)} min fa` : 'In attesa...'
+
+  const openChart = (ticker) => setChartTicker(ticker)
+  const openAI = (ticker) => navigate(`/ai?ticker=${ticker}`)
 
   // ── MOBILE LAYOUT ──────────────────────────────────────────────────────────
   if (isMobile) {
@@ -229,6 +234,8 @@ export default function Dashboard({ settings, onSelectSetup, journal, pendingSet
           </div>
         )}
 
+        {chartModal}
+
         {/* Bybit tab */}
         {mobileTab === 'bybit' && (
           <div style={{ padding:'16px', display:'flex', flexDirection:'column', gap:12 }}>
@@ -271,8 +278,15 @@ export default function Dashboard({ settings, onSelectSetup, journal, pendingSet
     )
   }
 
+  // ── CHART MODAL (shared between mobile and desktop)
+  const chartModal = chartTicker && (
+    <ChartModal ticker={chartTicker} onClose={() => setChartTicker(null)} />
+  )
+
   // ── DESKTOP LAYOUT ─────────────────────────────────────────────────────────
   return (
+    <>
+    {chartModal}
     <div style={{ display:'grid', gridTemplateColumns:'1fr 260px', height:'100%', overflow:'hidden' }}>
 
       {/* Main */}
@@ -298,8 +312,8 @@ export default function Dashboard({ settings, onSelectSetup, journal, pendingSet
 
         {/* Table */}
         <div>
-          <div style={{ display:'grid', gridTemplateColumns:'110px 58px 90px 90px 90px 70px 1fr', gap:8, padding:'6px 0', borderBottom:'2px solid var(--ink)' }}>
-            {['Asset','Dir.','Entry','Stop Loss','TP1','R:R','Azione'].map(h => (
+          <div style={{ display:'grid', gridTemplateColumns:'110px 58px 90px 90px 90px 60px 100px 80px 70px', gap:6, padding:'6px 0', borderBottom:'2px solid var(--ink)' }}>
+            {['Asset','Dir.','Entry','Stop Loss','TP1','R:R','Trade','AI','Chart'].map(h => (
               <div key={h} style={{ fontFamily:'var(--font-display)', fontSize:8, fontWeight:700, color:'var(--ink4)', textTransform:'uppercase', letterSpacing:1.2 }}>{h}</div>
             ))}
           </div>
@@ -308,8 +322,8 @@ export default function Dashboard({ settings, onSelectSetup, journal, pendingSet
             const isLong = s.direction === 'LONG'
             return (
               <div key={i} style={{
-                display:'grid', gridTemplateColumns:'110px 58px 90px 90px 90px 70px 1fr',
-                gap:8, padding:'10px 0', borderBottom:'1px solid var(--rule)', alignItems:'center',
+                display:'grid', gridTemplateColumns:'110px 58px 90px 90px 90px 60px 100px 80px 70px',
+                gap:6, padding:'10px 0', borderBottom:'1px solid var(--rule)', alignItems:'center',
                 background: isSelected ? 'rgba(0,0,0,.02)' : 'transparent',
               }}>
                 <div>
@@ -326,14 +340,22 @@ export default function Dashboard({ settings, onSelectSetup, journal, pendingSet
                   </div>
                   <div style={{ fontFamily:'var(--font-mono)', fontSize:10, fontWeight:700 }}>1:{s.rr}</div>
                 </div>
-                <button
-                  className="btn btn-outline"
-                  style={{ fontSize:10, padding:'5px 12px', borderColor: isLong ? 'var(--green)' : 'var(--red)', color: isLong ? 'var(--green)' : 'var(--red)' }}
+                <button className="btn btn-outline"
+                  style={{ fontSize:10, padding:'5px 8px', borderColor: isLong ? 'var(--green)' : 'var(--red)', color: isLong ? 'var(--green)' : 'var(--red)' }}
                   onClick={() => handleSelectSetup(s)}
                   onMouseEnter={e => { e.target.style.background = isLong ? 'var(--green)' : 'var(--red)'; e.target.style.color='#fff' }}
-                  onMouseLeave={e => { e.target.style.background='transparent'; e.target.style.color = isLong ? 'var(--green)' : 'var(--red)' }}
-                >
-                  ⚡ Apri Trade
+                  onMouseLeave={e => { e.target.style.background='transparent'; e.target.style.color = isLong ? 'var(--green)' : 'var(--red)' }}>
+                  ⚡ Trade
+                </button>
+                <button className="btn btn-ghost"
+                  style={{ fontSize:10, padding:'5px 8px' }}
+                  onClick={() => openAI(s.ticker)}>
+                  🤖 AI
+                </button>
+                <button className="btn btn-ghost"
+                  style={{ fontSize:10, padding:'5px 8px' }}
+                  onClick={() => openChart(s.ticker)}>
+                  📈 Chart
                 </button>
               </div>
             )
@@ -429,5 +451,6 @@ export default function Dashboard({ settings, onSelectSetup, journal, pendingSet
         </div>
       </div>
     </div>
+    </>
   )
 }
