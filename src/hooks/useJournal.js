@@ -11,6 +11,7 @@ export function useJournal() {
   const save = (t) => { setTrades(t); store.set('nexus_trades', t) }
 
   const addTrade = (setup, convId) => {
+    // setup may include orderId from Bybit response
     const e = parseFloat(setup.entry), s = parseFloat(setup.sl),
       t1 = parseFloat(setup.tp1), t2 = parseFloat(setup.tp2),
       b = parseFloat(setup.budget), lev = parseFloat(setup.leverage)
@@ -24,7 +25,7 @@ export function useJournal() {
     const profitTP2 = t2 ? Math.abs(t2 - e) / e * exposure : null
     const rr1 = profitTP1 / loss
     save([...trades, {
-      ...setup, id: Date.now(), convId,
+      ...setup, id: Date.now(), convId, orderId: setup.orderId || null,
       date: new Date().toLocaleDateString('it-IT'),
       status: 'Aperta',
       exposure, qty, liqPrice, loss, profitTP1, profitTP2, rr1,
