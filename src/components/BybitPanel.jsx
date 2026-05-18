@@ -184,22 +184,28 @@ export default function BybitPanel({ setup, settings, onOrderSent }) {
             />
           </div>
           <div>
-            <label style={labelStyle}>Trigger Direction</label>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:5 }}>
-              {[
-                { id: isLong ? 1 : 2, label: isLong ? '↗ Sale a (Rise)' : '↘ Scende a (Fall)' },
-                { id: isLong ? 2 : 1, label: isLong ? '↘ Scende a (Fall)' : '↗ Sale a (Rise)' },
-              ].map(opt => (
-                <div key={opt.id} style={{ padding:'7px 8px', border:'1px solid rgba(255,255,255,.1)', borderRadius:7, fontSize:10, color:'rgba(255,255,255,.4)', background:'rgba(255,255,255,.03)', textAlign:'center' }}>
-                  {opt.label}
+            <label style={labelStyle}>Trigger Direction (automatica)</label>
+            {(() => {
+              const tpNum = parseFloat(triggerPrice)
+              const cur = currentMktPrice || e
+              const isRising = tpNum > cur
+              const isValid = tpNum > 0 && cur > 0
+              return (
+                <div style={{
+                  padding:'9px 12px', borderRadius:8, fontSize:11, lineHeight:1.5,
+                  background: isValid ? (isRising ? 'rgba(0,217,126,.08)' : 'rgba(0,180,255,.08)') : 'rgba(255,255,255,.04)',
+                  border: isValid ? (isRising ? '1px solid rgba(0,217,126,.2)' : '1px solid rgba(0,180,255,.2)') : '1px solid rgba(255,255,255,.08)',
+                  color: isValid ? (isRising ? 'var(--green-d)' : 'var(--cyan-d)') : 'rgba(255,255,255,.3)',
+                }}>
+                  {!isValid
+                    ? 'Inserisci un trigger price per vedere la direzione'
+                    : isRising
+                      ? `↗ Rising — si attiva quando il prezzo SALE a $${tpNum} (attuale $${cur?.toFixed(2)})`
+                      : `↘ Falling — si attiva quando il prezzo SCENDE a $${tpNum} (attuale $${cur?.toFixed(2)})`
+                  }
                 </div>
-              ))}
-            </div>
-            <div style={{ fontSize:9, color:'rgba(255,255,255,.2)', marginTop:4 }}>
-              {isLong
-                ? 'Long: il trigger si attiva quando il prezzo sale al livello indicato'
-                : 'Short: il trigger si attiva quando il prezzo scende al livello indicato'}
-            </div>
+              )
+            })()}
           </div>
           <div>
             <label style={labelStyle}>Trigger By</label>
