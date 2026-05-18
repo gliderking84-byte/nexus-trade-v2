@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react'
 
 const DEFAULTS = {
-  anthropicKey: '',
-  bybitKey: '',
-  bybitSecret: '',
-  bybitTestnet: true,
-  defaultBudget: '50',
+  anthropicKey:  '',
+  bybitKey:      '',
+  bybitSecret:   '',
+  bybitTestnet:  true,
+  positionMode:  'one-way',   // 'one-way' | 'hedge'
+  defaultBudget:   '50',
   defaultLeverage: '7',
-  defaultAssets: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'AVAXUSDT'],
+  currency:      'USD',       // 'USD' | 'EUR'
+  eurUsdRate:    0.92,        // fallback rate
+  defaultAssets: ['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','AVAXUSDT','DOTUSDT','LINKUSDT','ADAUSDT','XRPUSDT','DOGEUSDT','MATICUSDT','ARBUSDT'],
 }
 
 export function useSettings() {
@@ -18,6 +21,14 @@ export function useSettings() {
     } catch { return DEFAULTS }
   })
 
+  // Fetch live EUR/USD rate on mount
+  useEffect(() => {
+    fetch('https://api.frankfurter.app/latest?from=USD&to=EUR')
+      .then(r => r.json())
+      .then(d => { if (d.rates?.EUR) update({ eurUsdRate: d.rates.EUR }) })
+      .catch(() => {})
+  }, [])
+
   const update = (updates) => {
     const next = { ...settings, ...updates }
     setSettings(next)
@@ -27,5 +38,14 @@ export function useSettings() {
   const hasAnthropicKey = Boolean(settings.anthropicKey?.startsWith('sk-ant'))
   const hasBybitKeys    = Boolean(settings.bybitKey && settings.bybitSecret)
 
-  return { settings, update, hasAnthropicKey, hasBybitKeys }
+  // Currency formatter
+  const fmtCurrency = (usdAmount) => {
+    const n = parseFloat(usdAmount || 0)
+    if (settings.currency === 'EUR') {
+      return `€${(n * settings.eurUsdRate).toFixed(2)}`
+    }
+    return `$${n.toFixed(2)}`
+  }
+
+  return { settings, update, hasAnthropicKey, hasBybitKeys, fmtCurrency }
 }
