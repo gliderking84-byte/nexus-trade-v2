@@ -83,7 +83,7 @@ export default function BybitPanel({ setup, settings, onOrderSent }) {
         triggerPrice: orderType === 'Conditional' ? triggerPrice : undefined,
         triggerBy:    orderType === 'Conditional' ? triggerBy    : undefined,
         currentPrice: orderType === 'Market' ? currentMktPrice : undefined,
-        positionMode: settings.settings.positionMode || 'one-way',
+        hedgeMode: settings.settings.bybitHedgeMode || false,
       })
       setResult(res)
       // Pass orderId so journal can cancel later
