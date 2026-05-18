@@ -38,7 +38,7 @@ export default function App() {
             onSendBybit={handleSendBybit}
           />
         } />
-        <Route path="/journal" element={<Journal journal={journal} />} />
+        <Route path="/journal" element={<Journal journal={journal} settings={settings} />} />
         <Route path="/conversations" element={<Conversations />} />
         <Route path="/settings" element={<Settings settings={settings} />} />
       </Routes>
