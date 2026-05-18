@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { fmt, bybitPlaceOrder } from '../utils/index.js'
+import { fmt as fmtUSD, bybitPlaceOrder } from '../utils/index.js'
 import { usePrices } from '../hooks/usePrices'
 
 const ORDER_TYPES = [
@@ -15,6 +15,7 @@ const TRIGGER_BY_OPTIONS = [
 ]
 
 export default function BybitPanel({ setup, settings, onOrderSent }) {
+  const fmt = settings.fmtCurrency || fmtUSD
   const { prices } = usePrices(setup ? [setup.ticker] : [])
   const [fields, setFields]       = useState({ entry:'', sl:'', tp1:'', tp2:'', leverage:'', budget:'' })
   const [orderType, setOrderType] = useState('Limit')
@@ -80,6 +81,7 @@ export default function BybitPanel({ setup, settings, onOrderSent }) {
         triggerPrice: orderType === 'Conditional' ? triggerPrice : undefined,
         triggerBy:    orderType === 'Conditional' ? triggerBy    : undefined,
         currentPrice: orderType === 'Market' ? currentMktPrice : undefined,
+        positionMode: settings.settings.positionMode || 'one-way',
       })
       setResult(res)
       // Pass orderId so journal can cancel later
@@ -248,8 +250,8 @@ export default function BybitPanel({ setup, settings, onOrderSent }) {
         <>
           <div style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.06)', borderRadius:9, padding:'10px', display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
             {[
-              { l:'Esposizione', v: fmt(exposure),    c:'var(--cyan-d)' },
-              { l:'Liq. Price',  v: fmt(liqPrice),    c:'#ff8844' },
+              { l:'Esposizione', v: fmtCur(exposure),    c:'var(--cyan-d)' },
+              { l:'Liq. Price',  v: fmtCur(liqPrice),    c:'#ff8844' },
               { l:'R:R',         v: rr ? `1:${rr.toFixed(2)}` : '—', c: rrColor },
             ].map(({ l, v, c }) => (
               <div key={l} style={{ textAlign:'center' }}>
@@ -261,11 +263,11 @@ export default function BybitPanel({ setup, settings, onOrderSent }) {
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
             <div style={{ background:'rgba(255,68,102,.07)', borderRadius:8, padding:'8px', textAlign:'center' }}>
               <div style={{ fontFamily:'var(--font-display)', fontSize:8, fontWeight:700, color:'rgba(255,255,255,.25)', textTransform:'uppercase', letterSpacing:.8, marginBottom:3 }}>Perdita SL</div>
-              <div style={{ fontFamily:'var(--font-mono)', fontSize:12, fontWeight:700, color:'var(--red-d)' }}>-{fmt(loss)}</div>
+              <div style={{ fontFamily:'var(--font-mono)', fontSize:12, fontWeight:700, color:'var(--red-d)' }}>-{fmtCur(loss)}</div>
             </div>
             <div style={{ background:'rgba(0,217,126,.07)', borderRadius:8, padding:'8px', textAlign:'center' }}>
               <div style={{ fontFamily:'var(--font-display)', fontSize:8, fontWeight:700, color:'rgba(255,255,255,.25)', textTransform:'uppercase', letterSpacing:.8, marginBottom:3 }}>Profitto TP1</div>
-              <div style={{ fontFamily:'var(--font-mono)', fontSize:12, fontWeight:700, color:'var(--green-d)' }}>+{fmt(profit)}</div>
+              <div style={{ fontFamily:'var(--font-mono)', fontSize:12, fontWeight:700, color:'var(--green-d)' }}>+{fmtCur(profit)}</div>
             </div>
           </div>
         </>
