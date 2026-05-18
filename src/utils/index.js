@@ -177,6 +177,41 @@ export async function bybitPlaceOrder({ apiKey, apiSecret, testnet, setup, order
   return data
 }
 
+
+// ─── Bybit Cancel Order ───────────────────────────────────────────────────────
+export async function bybitCancelOrder({ apiKey, apiSecret, testnet, ticker, orderId }) {
+  const base = testnet
+    ? 'https://api-testnet.bybit.com'
+    : 'https://api.bybit.com'
+
+  const ts = await getBybitTimestamp(base)
+  const recvWindow = '20000'
+
+  const body = {
+    category: 'linear',
+    symbol: ticker,
+    orderId,
+  }
+  const bodyStr = JSON.stringify(body)
+  const signStr = `${ts}${apiKey}${recvWindow}${bodyStr}`
+  const sign = await hmacSHA256(apiSecret, signStr)
+
+  const res = await fetch(`${base}/v5/order/cancel`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-BAPI-API-KEY': apiKey,
+      'X-BAPI-SIGN': sign,
+      'X-BAPI-TIMESTAMP': ts,
+      'X-BAPI-RECV-WINDOW': recvWindow,
+    },
+    body: bodyStr,
+  })
+  const data = await res.json()
+  if (data.retCode !== 0) throw new Error(data.retMsg || 'Bybit cancel error')
+  return data
+}
+
 // ─── AI System prompts ────────────────────────────────────────────────────────
 export const SYSTEM_DASHBOARD = `Sei NexusAI, analista tecnico esperto di crypto perpetual contracts su Bybit.
 Rispondi SEMPRE in italiano. Sii conciso (max 4-5 righe), diretto e professionale.
