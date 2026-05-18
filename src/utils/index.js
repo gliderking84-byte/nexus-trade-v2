@@ -148,9 +148,13 @@ export async function bybitPlaceOrder({ apiKey, apiSecret, testnet, setup, order
     body.orderType = 'Market'
     body.timeInForce = 'IOC'
     body.orderFilter = 'StopOrder'
-    body.triggerPrice = String(triggerPrice || setup.entry)
+    const tpNum = parseFloat(triggerPrice || setup.entry)
+    body.triggerPrice = String(tpNum)
     body.triggerBy = triggerBy || 'LastPrice'
-    body.triggerDirection = setup.direction === 'LONG' ? 1 : 2
+    // triggerDirection: 1=Rising (trigger when price goes UP to level)
+    //                   2=Falling (trigger when price goes DOWN to level)
+    // Determined by comparing trigger vs current price — NOT by long/short
+    body.triggerDirection = tpNum > refPrice ? 1 : 2
   }
 
   const bodyStr = JSON.stringify(body)
