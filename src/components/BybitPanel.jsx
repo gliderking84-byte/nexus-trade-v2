@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { fmt, bybitPlaceOrder } from '../utils/index.js'
+import { usePrices } from '../hooks/usePrices'
 
 const ORDER_TYPES = [
   { id:'Limit',       label:'Limit',       desc:'Ordine al prezzo specificato' },
@@ -14,6 +15,7 @@ const TRIGGER_BY_OPTIONS = [
 ]
 
 export default function BybitPanel({ setup, settings, onOrderSent }) {
+  const { prices } = usePrices(setup ? [setup.ticker] : [])
   const [fields, setFields]       = useState({ entry:'', sl:'', tp1:'', tp2:'', leverage:'', budget:'' })
   const [orderType, setOrderType] = useState('Limit')
   const [triggerPrice, setTriggerPrice] = useState('')
@@ -48,7 +50,8 @@ export default function BybitPanel({ setup, settings, onOrderSent }) {
   const tp  = parseFloat(triggerPrice)
   const isLong = setup?.direction === 'LONG'
 
-  const priceForCalc = orderType === 'Market' ? e : orderType === 'Conditional' ? (tp || e) : e
+  const currentMktPrice = setup ? (prices[setup.ticker]?.price || e) : e
+  const priceForCalc = orderType === 'Market' ? (currentMktPrice || e) : orderType === 'Conditional' ? (tp || e) : e
   const valid = priceForCalc > 0 && s > 0 && t1 > 0 && b > 0 && lev > 0
     && (orderType !== 'Conditional' || tp > 0)
 
@@ -69,13 +72,14 @@ export default function BybitPanel({ setup, settings, onOrderSent }) {
     try {
       const merged = { ...setup, ...fields }
       const res = await bybitPlaceOrder({
-        apiKey:    settings.settings.bybitKey,
-        apiSecret: settings.settings.bybitSecret,
-        testnet:   settings.settings.bybitTestnet,
-        setup:     merged,
+        apiKey:       settings.settings.bybitKey,
+        apiSecret:    settings.settings.bybitSecret,
+        testnet:      settings.settings.bybitTestnet,
+        setup:        merged,
         orderType,
         triggerPrice: orderType === 'Conditional' ? triggerPrice : undefined,
         triggerBy:    orderType === 'Conditional' ? triggerBy    : undefined,
+        currentPrice: orderType === 'Market' ? currentMktPrice : undefined,
       })
       setResult(res)
       onOrderSent?.(merged)
@@ -209,7 +213,7 @@ export default function BybitPanel({ setup, settings, onOrderSent }) {
       {/* ── Price fields ────────────────────────────────────────────────── */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
         {[
-          { key:'entry',    label: orderType === 'Conditional' ? 'Order Price $' : orderType === 'Market' ? 'Prezzo stimato $' : 'Entry $', color:'var(--cyan-d)', disabled: orderType === 'Market' },
+          { key:'entry',    label: orderType === 'Conditional' ? 'Order Price $' : orderType === 'Market' ? `Prezzo live $${currentMktPrice ? currentMktPrice.toFixed(2) : '—'}` : 'Entry $', color:'var(--cyan-d)', disabled: orderType === 'Market' },
           { key:'sl',       label:'Stop Loss $',  color:'var(--red-d)' },
           { key:'tp1',      label:'TP1 $',         color:'var(--green-d)' },
           { key:'tp2',      label:'TP2 $',         color:'var(--green-d)' },
