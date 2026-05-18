@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { usePrices } from '../hooks/usePrices'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { useBalance } from '../hooks/useBalance'
 
 const NAV = [
   { path: '/',               icon: '◈',  label: 'Dashboard' },
@@ -13,12 +14,13 @@ const NAV = [
 
 const SYMBOLS = ['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','AVAXUSDT']
 
-export default function Layout({ children, stats }) {
+export default function Layout({ children, stats, settings }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { prices, connected } = usePrices(SYMBOLS)
   const isMobile = useIsMobile()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const { balance } = useBalance(settings)
 
   useEffect(() => { setDrawerOpen(false) }, [pathname])
 
@@ -135,6 +137,12 @@ export default function Layout({ children, stats }) {
                 <div className="live-dot" style={{ width:4, height:4 }} />
                 LIVE
               </div>
+              {balance !== null && (
+                <div style={{ display:'flex', alignItems:'center', gap:4, fontSize:8, fontWeight:700, color:'rgba(255,255,255,.7)', background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.1)', borderRadius:6, padding:'3px 8px', fontFamily:'var(--font-mono)' }}>
+                  <span style={{ color:'rgba(255,255,255,.3)', fontSize:7, fontFamily:'var(--font-display)', fontWeight:700, letterSpacing:.5 }}>USDT</span>
+                  {parseFloat(balance).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 })}
+                </div>
+              )}
             </div>
           </div>
 
