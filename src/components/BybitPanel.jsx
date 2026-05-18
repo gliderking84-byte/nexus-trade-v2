@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { fmt as fmtUSD, bybitPlaceOrder } from '../utils/index.js'
 import { usePrices } from '../hooks/usePrices'
+import { useCurrency } from '../hooks/useCurrency'
 
 const ORDER_TYPES = [
   { id:'Limit',       label:'Limit',       desc:'Ordine al prezzo specificato' },
@@ -15,7 +16,8 @@ const TRIGGER_BY_OPTIONS = [
 ]
 
 export default function BybitPanel({ setup, settings, onOrderSent }) {
-  const fmt = settings.fmtCurrency || fmtUSD
+  const { format: fmtCur } = useCurrency(settings?.settings?.currency)
+  const fmt = (n, d) => fmtCur ? fmtCur(n, d) : fmtUSD(n, d)
   const { prices } = usePrices(setup ? [setup.ticker] : [])
   const [fields, setFields]       = useState({ entry:'', sl:'', tp1:'', tp2:'', leverage:'', budget:'' })
   const [orderType, setOrderType] = useState('Limit')
